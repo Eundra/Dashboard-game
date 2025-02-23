@@ -4,20 +4,17 @@ import pandas as pd
 # Fungsi untuk menghasilkan jadwal pertandingan dengan sesi yang tidak bentrok
 def generate_fixtures(teams, home_away=True):
     sessions = []
-    base_fixtures = []
-    num_teams = len(teams)
+    base_fixtures = [
+        [(teams[0], teams[3]), (teams[2], teams[1])],  # Pertandingan 1
+        [(teams[0], teams[1]), (teams[2], teams[3])],  # Pertandingan 2
+        [(teams[0], teams[2]), (teams[1], teams[3])]   # Pertandingan 3
+    ]
     
-    for i in range(num_teams - 1):
-        round_matches = []
-        for j in range(num_teams // 2):
-            home = teams[j]
-            away = teams[num_teams - 1 - j]
-            round_matches.append((home, away))
-        sessions.append(round_matches)
-        teams.insert(1, teams.pop())  # Rotasi tim
-    
+    for fixtures in base_fixtures:
+        sessions.append(fixtures)
+
     if home_away:  # Jika Home & Away, tambahkan putaran kedua
-        for fixtures in sessions:
+        for fixtures in base_fixtures:
             reversed_fixtures = [(away, home) for home, away in fixtures]
             sessions.append(reversed_fixtures)
     
@@ -61,12 +58,12 @@ if "champion" not in st.session_state:
 
 if page == "Input & Jadwal":
     st.title("⚽ Input Tim & Jadwal")
-    team_input = st.text_area("Masukkan tim (pisahkan dengan koma)", "")
+    team_input = st.text_area("Masukkan 4 tim (pisahkan dengan koma)", "")
 
     if st.button("Buat Jadwal Grup"):
         teams = [t.strip() for t in team_input.split(",") if t.strip()]
-        if len(teams) < 4:
-            st.error("Minimal harus memasukkan 4 tim!")
+        if len(teams) != 4:
+            st.error("Harus memasukkan tepat 4 tim!")
         else:
             home_away = st.radio("Pilih sistem pertandingan:", ("Home & Away", "Sekali Bertemu"))
             st.session_state.teams = teams
@@ -106,8 +103,14 @@ if page == "Klasemen":
         standings_df = pd.DataFrame.from_dict(st.session_state.standings, orient='index')
         standings_df = standings_df.sort_values(by=['Pts', 'GF', 'GA'], ascending=[False, False, True])
         st.dataframe(standings_df)
-        winner = standings_df.index[0]
-        st.success(f"🎉 Selamat tim {winner} memenangkan liga! Selamat berjuang di babak championship! 🎉")
+
+if page == "Riwayat":
+    st.title("📜 Riwayat Pertandingan")
+    if not st.session_state.match_history:
+        st.warning("Belum ada pertandingan yang dikonfirmasi.")
+    else:
+        for history in st.session_state.match_history:
+            st.write(history)
 
 if page == "Riwayat":
     st.title("📜 Riwayat Pertandingan")
