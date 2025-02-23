@@ -53,6 +53,8 @@ if "confirmed_matches" not in st.session_state:
     st.session_state.confirmed_matches = set()
 if "match_history" not in st.session_state:
     st.session_state.match_history = []
+if "champion" not in st.session_state:
+    st.session_state.champion = None
 
 if page == "Input & Jadwal":
     st.title("⚽ Input Tim & Jadwal")
@@ -109,3 +111,75 @@ if page == "Riwayat":
     else:
         for history in st.session_state.match_history:
             st.write(history)
+
+if page == "Riwayat":
+    st.title("📜 Riwayat Pertandingan")
+    if not st.session_state.match_history:
+        st.warning("Belum ada pertandingan yang dikonfirmasi.")
+    else:
+        for history in st.session_state.match_history:
+            st.write(history)
+
+if page == "Babak Championship":
+    st.title("🏆 Babak Championship")
+
+    standings_df = pd.DataFrame.from_dict(st.session_state.standings, orient='index')
+    standings_df['GD'] = standings_df['GF'] - standings_df['GA']
+    standings_df = standings_df.sort_values(by=['Pts', 'GD', 'GF'], ascending=[False, False, False])
+
+    if len(standings_df) < 4:
+        st.warning("Jumlah tim tidak cukup untuk babak championship!")
+    else:
+        teams = standings_df.index[:4].tolist()
+        
+        # Babak penyisihan awal
+        st.subheader("🏅 Babak Penyisihan")
+        st.write(f"{teams[0]} vs {teams[1]} (Perebutan tiket ke final)")
+        st.write(f"{teams[2]} vs {teams[3]} (Perebutan tiket ke semi final)")
+        
+        score1 = st.number_input(f"Skor {teams[0]}", min_value=0, step=1, key="match1_team1")
+        score2 = st.number_input(f"Skor {teams[1]}", min_value=0, step=1, key="match1_team2")
+        score3 = st.number_input(f"Skor {teams[2]}", min_value=0, step=1, key="match2_team3")
+        score4 = st.number_input(f"Skor {teams[3]}", min_value=0, step=1, key="match2_team4")
+
+        if st.button("Konfirmasi Babak Penyisihan"):
+            finalist = teams[0] if score1 > score2 else teams[1]
+            semi_finalist = teams[3] if score3 > score4 else teams[2]
+            loser_of_top_match = teams[1] if score1 > score2 else teams[0]
+            st.session_state.semi_final_match = (semi_finalist, loser_of_top_match)
+            st.session_state.finalist = finalist
+            st.success(f"{finalist} melaju ke final!")
+            st.success(f"{semi_finalist} melaju ke semi final melawan {loser_of_top_match}!")
+        
+        # Semi Final
+        if "semi_final_match" in st.session_state:
+            st.subheader("🏅 Semi Final")
+            teamA, teamB = st.session_state.semi_final_match
+            scoreA = st.number_input(f"Skor {teamA}", min_value=0, step=1, key="semi_teamA")
+            scoreB = st.number_input(f"Skor {teamB}", min_value=0, step=1, key="semi_teamB")
+
+            if st.button("Konfirmasi Semi Final"):
+                semi_winner = teamA if scoreA > scoreB else teamB
+                st.session_state.finalist2 = semi_winner
+                st.success(f"{semi_winner} melaju ke Final melawan {st.session_state.finalist}!")
+
+        # Final
+        if "finalist2" in st.session_state:
+            st.subheader("🏆 Final")
+            score_final1 = st.number_input(f"Skor {st.session_state.finalist}", min_value=0, step=1, key="final1")
+            score_final2 = st.number_input(f"Skor {st.session_state.finalist2}", min_value=0, step=1, key="final2")
+
+            if st.button("Konfirmasi Final"):
+                champion = st.session_state.finalist if score_final1 > score_final2 else st.session_state.finalist2
+                st.session_state.champion = champion
+                st.success(f"🎉 Selamat! {champion} adalah juara Babak Championship! 🎉")
+                st.balloons()
+
+                st.markdown("""
+                    <iframe width="560" height="315" 
+                    src="https://www.youtube.com/embed/04854XqcfCY?autoplay=1" 
+                    frameborder="0" allow="accelerometer; autoplay; clipboard-write; 
+                    encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+                    </iframe>
+                """, unsafe_allow_html=True)
+                # st.audio("we_are_the_champions.mp3")  # Putar lagu We Are The Champions
